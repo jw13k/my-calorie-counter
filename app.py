@@ -146,7 +146,7 @@ def estimate_calories(labels: list[dict[str, Any]]) -> dict[str, Any]:
 # -----------------------------------------------------------------------------
 def analyze(image):
     if image is None:
-        return {}, {"error": "이미지를 먼저 업로드해 주세요."}
+        return {}, {"error": "이미지를 먼저 up로드해 주세요."}
     labels = classify_food(image)
     label_view = {item["label"]: item["score"] for item in labels}
     nutrition = estimate_calories(labels)
