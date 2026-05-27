@@ -166,7 +166,7 @@ def build_ui() -> gr.Interface:
         ],
         title="🍱 Calorie Counter (LangChain LCEL)",
         description=(
-            "음식 사진을 up로드하면 HF Inference API로 food을 인식하고, "
+            "음식 사진을 업로드하면 HF Inference API로 food을 인식하고, "
             "LangChain LCEL 체인이 1인분 기준 칼로리/영양소를 추정합니다. "
             "결과는 참고용입니다."
         ),
