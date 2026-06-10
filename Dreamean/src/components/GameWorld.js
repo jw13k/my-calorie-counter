@@ -13,8 +13,8 @@ export class GameWorld {
         // Game dimensions
         this.width = 800;
         this.height = 400;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        this.canvas.width = this.width / 2;  // Physical buffer half-resolution for chunky pixel-art look
+        this.canvas.height = this.height / 2;
         
         // Game control state
         this.controlsEnabled = true;
@@ -297,6 +297,9 @@ export class GameWorld {
     }
 
     draw() {
+        this.ctx.save();
+        this.ctx.scale(0.5, 0.5); // Scale logical 800x400 coordinates to physical 400x200 buffer
+        
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // 1. Draw Platforms
@@ -479,6 +482,7 @@ export class GameWorld {
             this.ctx.fillText('[E] ' + obj.label, bubbleX, bubbleY - 10);
             this.ctx.restore();
         }
+        this.ctx.restore(); // Restore downscale transformation
     }
 
     animate(timestamp) {
