@@ -1,7 +1,1 @@
-gradio>=5.0,<6
-huggingface_hub>=0.24,<1.0
-langchain>=0.3
-langchain-core>=0.3
-langchain-huggingface>=0.1
-pillow>=10.0
-python-dotenv>=1.0
+# Dreamean 정적 웹사이트 서빙이므로 파이썬 외부 라이브러리가 필요하지 않습니다.
