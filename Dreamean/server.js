@@ -1,7 +1,8 @@
-/**
- * Dreamean - AI API Router Client Module
- * Supports OpenAI, Google Gemini, Anthropic Claude, and OpenAI-Compatible APIs
- */
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const PORT = process.env.PORT || 8000;
 
 const SYSTEM_PROMPT = `당신은 20년 경력의 무의식 연구원이자 깊이 있는 심리 치료사, 그리고 신비주의 꿈 해석가입니다.
 사용자가 입력한 꿈의 묘사와 감정 톤을 토대로, 시적이며 통찰력 가득한 해몽 결과를 작성해 주세요. 
@@ -32,92 +33,111 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 무의식 연구원이자 깊�
 
 대답은 오직 상기 JSON 규격을 만족하는 순수한 JSON 텍스트여야 합니다.`;
 
-/**
- * Route dream interpretation requests to the appropriate AI provider.
- * Tries to route via the local proxy server first (securing API keys).
- * Falls back to client-side direct calling if the proxy is not running (e.g. static hosting).
- * @param {Object} config AI configuration from storage
- * @param {string} dreamContent Dream narrative text
- * @param {string} mood Selected mood indicator
- * @returns {Promise<Object>} Formatted dream interpretation JSON
- */
-export async function interpretDreamAPI(config, dreamContent, mood) {
-    const userPrompt = `꿈 내용: "${dreamContent}"
-선택한 감정 분위기: "${translateMood(mood)}"`;
+// MIME types mapping
+const MIME_TYPES = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.webp': 'image/webp'
+};
 
-    try {
-        // Try calling the proxy server endpoint first
-        const response = await fetch('/api/interpret', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                provider: config.provider,
-                dreamContent: dreamContent,
-                mood: mood,
-                apiKey: config.isDefaultDeveloperKey ? '' : (config.apiKey || ''),
-                customBaseUrl: config.customBaseUrl || '',
-                customModel: config.customModel || ''
-            })
+const server = http.createServer(async (req, res) => {
+    // 1. API Route: POST /api/interpret
+    if (req.method === 'POST' && req.url === '/api/interpret') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk;
         });
+        req.on('end', async () => {
+            try {
+                const payload = JSON.parse(body);
+                const { provider, dreamContent, mood, customBaseUrl, customModel } = payload;
+                let apiKey = payload.apiKey;
 
-        // If proxy server responded with 404, fallback to direct client-side fetch
-        if (response.status === 404) {
-            console.warn('Proxy server endpoint /api/interpret not found (404). Falling back to direct client-side execution.');
-            return await executeDirectClientSide(config, userPrompt);
-        }
+                // Fallback to environment variables if no user key is provided (keeps keys secure on server-side)
+                if (!apiKey) {
+                    if (provider === 'openai') apiKey = process.env.OPENAI_API_KEY;
+                    else if (provider === 'gemini') apiKey = process.env.GEMINI_API_KEY;
+                    else if (provider === 'anthropic') apiKey = process.env.ANTHROPIC_API_KEY;
+                    else if (provider === 'custom') apiKey = process.env.CUSTOM_API_KEY;
+                }
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errMsg = errorData.error || `Proxy Server Error: ${response.status}`;
-            
-            if (response.status === 401 || response.status === 403) {
-                throw new Error('API_KEY_INVALID');
-            } else if (response.status === 429) {
-                throw new Error('RATE_LIMIT_EXCEEDED');
-            } else {
-                throw new Error(errMsg);
+                if (!apiKey) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'API_KEY_MISSING' }));
+                    return;
+                }
+
+                const userPrompt = `꿈 내용: "${dreamContent}"\n선택한 감정 분위기: "${translateMood(mood)}"`;
+                let result;
+
+                if (provider === 'openai') {
+                    result = await callOpenAI(apiKey, userPrompt);
+                } else if (provider === 'gemini') {
+                    result = await callGemini(apiKey, userPrompt);
+                } else if (provider === 'anthropic') {
+                    result = await callAnthropic(apiKey, userPrompt);
+                } else if (provider === 'custom') {
+                    result = await callCustom(apiKey, customBaseUrl, customModel, userPrompt);
+                } else {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'UNSUPPORTED_PROVIDER' }));
+                    return;
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+
+            } catch (err) {
+                console.error('Proxy Error:', err);
+                let statusCode = 500;
+                let errMsg = err.message || 'Internal Server Error';
+
+                if (err.message === 'API_KEY_INVALID') statusCode = 401;
+                else if (err.message === 'RATE_LIMIT_EXCEEDED') statusCode = 429;
+
+                res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: errMsg }));
             }
+        });
+        return;
+    }
+
+    // 2. Serve Static Files
+    let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+    
+    // Prevent directory traversal attacks
+    if (!filePath.startsWith(__dirname)) {
+        res.writeHead(403);
+        res.end('Forbidden');
+        return;
+    }
+
+    fs.readFile(filePath, (err, content) => {
+        if (err) {
+            if (err.code === 'ENOENT') {
+                res.writeHead(404, { 'Content-Type': 'text/html' });
+                res.end('<h1>404 Not Found</h1>');
+            } else {
+                res.writeHead(500);
+                res.end(`Server Error: ${err.code}`);
+            }
+        } else {
+            const ext = path.extname(filePath).toLowerCase();
+            const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(content, 'utf-8');
         }
+    });
+});
 
-        return await response.json();
-    } catch (err) {
-        // If it's a known error from the API response, propagate it
-        if (err.message === 'API_KEY_INVALID' || err.message === 'RATE_LIMIT_EXCEEDED' || err.message === 'API_KEY_MISSING') {
-            throw err;
-        }
-        // If it's a connection error trying to reach the proxy (e.g. local pure static python http.server), fallback to client-side
-        console.warn('Error calling proxy server. Falling back to direct client-side execution:', err);
-        return await executeDirectClientSide(config, userPrompt);
-    }
-}
-
-/**
- * Direct client-side execution fallback if proxy is unavailable.
- */
-async function executeDirectClientSide(config, userPrompt) {
-    if (!config || !config.apiKey) {
-        throw new Error('API_KEY_MISSING');
-    }
-
-    switch (config.provider) {
-        case 'openai':
-            return callOpenAI(config.apiKey, userPrompt);
-        case 'gemini':
-            return callGemini(config.apiKey, userPrompt);
-        case 'anthropic':
-            return callAnthropic(config.apiKey, userPrompt);
-        case 'custom':
-            return callCustom(config, userPrompt);
-        default:
-            throw new Error('UNSUPPORTED_PROVIDER');
-    }
-}
-
-/**
- * Call OpenAI API.
- */
+// Helper calling OpenAI
 async function callOpenAI(apiKey, userPrompt) {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -136,17 +156,12 @@ async function callOpenAI(apiKey, userPrompt) {
             max_tokens: 1500
         })
     });
-
     return handleResponse(response, 'openai');
 }
 
-/**
- * Call Google Gemini API (with JSON schema configuration).
- */
+// Helper calling Gemini
 async function callGemini(apiKey, userPrompt) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
-
-    // Gemini Schema Configuration matching our JSON requirements
     const geminiSchema = {
         type: 'OBJECT',
         properties: {
@@ -180,31 +195,22 @@ async function callGemini(apiKey, userPrompt) {
 
     const response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            contents: [
-                { parts: [{ text: userPrompt }] }
-            ],
+            contents: [{ parts: [{ text: userPrompt }] }],
             generationConfig: {
                 responseMimeType: 'application/json',
                 responseSchema: geminiSchema,
                 temperature: 0.75,
                 maxOutputTokens: 1500
             },
-            systemInstruction: {
-                parts: [{ text: SYSTEM_PROMPT }]
-            }
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }
         })
     });
-
     return handleResponse(response, 'gemini');
 }
 
-/**
- * Call Anthropic Claude API (Direct browser execution enabled).
- */
+// Helper calling Anthropic
 async function callAnthropic(apiKey, userPrompt) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -218,33 +224,27 @@ async function callAnthropic(apiKey, userPrompt) {
             model: 'claude-3-5-haiku-20241022',
             max_tokens: 1500,
             system: SYSTEM_PROMPT + '\n중요: 오직 지정된 규격의 JSON 객체만 텍스트로 응답해야 하며 다른 서론이나 마크다운 백틱 코드블록(```json)을 붙이지 마세요.',
-            messages: [
-                { role: 'user', content: userPrompt }
-            ],
+            messages: [{ role: 'user', content: userPrompt }],
             temperature: 0.75
         })
     });
-
     return handleResponse(response, 'anthropic');
 }
 
-/**
- * Call Custom OpenAI-compatible API.
- */
-async function callCustom(config, userPrompt) {
-    const baseUrl = config.customBaseUrl.endsWith('/') ? config.customBaseUrl.slice(0, -1) : config.customBaseUrl;
+// Helper calling Custom
+async function callCustom(apiKey, customBaseUrl, customModel, userPrompt) {
+    const baseUrl = customBaseUrl.endsWith('/') ? customBaseUrl.slice(0, -1) : customBaseUrl;
     const url = `${baseUrl}/chat/completions`;
-    const model = config.customModel || 'gpt-4o-mini';
+    const model = customModel || 'gpt-4o-mini';
 
     const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.apiKey}`
+            'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
             model: model,
-            // Try enabling JSON Mode if supported (but don't fail if Custom API is slightly older)
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
@@ -254,64 +254,36 @@ async function callCustom(config, userPrompt) {
             max_tokens: 1500
         })
     });
-
     return handleResponse(response, 'custom');
 }
 
-/**
- * Common response parser and error handler.
- */
+// Response Parser
 async function handleResponse(response, provider) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         let errMsg = '';
+        if (provider === 'gemini') errMsg = errorData.error?.message || `Gemini API Error: ${response.status}`;
+        else if (provider === 'anthropic') errMsg = errorData.error?.message || `Claude API Error: ${response.status}`;
+        else errMsg = errorData.error?.message || `API Error: ${response.status}`;
 
-        if (provider === 'gemini') {
-            errMsg = errorData.error?.message || `Gemini API Error: ${response.status}`;
-        } else if (provider === 'anthropic') {
-            errMsg = errorData.error?.message || `Claude API Error: ${response.status}`;
-        } else {
-            errMsg = errorData.error?.message || `API Error: ${response.status}`;
-        }
-
-        if (response.status === 401 || response.status === 403) {
-            throw new Error('API_KEY_INVALID');
-        } else if (response.status === 429) {
-            throw new Error('RATE_LIMIT_EXCEEDED');
-        } else {
-            throw new Error(errMsg);
-        }
+        if (response.status === 401 || response.status === 403) throw new Error('API_KEY_INVALID');
+        else if (response.status === 429) throw new Error('RATE_LIMIT_EXCEEDED');
+        else throw new Error(errMsg);
     }
 
     const data = await response.json();
     let text = '';
+    if (provider === 'openai' || provider === 'custom') text = data.choices[0].message.content;
+    else if (provider === 'gemini') text = data.candidates[0].content.parts[0].text;
+    else if (provider === 'anthropic') text = data.content[0].text;
 
-    // Extract text based on provider schema
-    if (provider === 'openai' || provider === 'custom') {
-        text = data.choices[0].message.content;
-    } else if (provider === 'gemini') {
-        text = data.candidates[0].content.parts[0].text;
-    } else if (provider === 'anthropic') {
-        text = data.content[0].text;
+    text = text.trim();
+    if (text.startsWith('```')) {
+        text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
     }
-
-    try {
-        // Strip markdown backticks if returned (sometimes Claude or Custom models bypass JSON restrictions)
-        text = text.trim();
-        if (text.startsWith('```')) {
-            text = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        }
-
-        return JSON.parse(text);
-    } catch (err) {
-        console.error('Error parsing JSON from API response:', text, err);
-        throw new Error('JSON_PARSE_ERROR');
-    }
+    return JSON.parse(text);
 }
 
-/**
- * Translate mood key to Korean descriptive words.
- */
 function translateMood(mood) {
     const map = {
         'peaceful': '평화롭고 고요한 상태',
@@ -322,3 +294,7 @@ function translateMood(mood) {
     };
     return map[mood] || mood;
 }
+
+server.listen(PORT, () => {
+    console.log(`Server is running at http://localhost:${PORT}`);
+});

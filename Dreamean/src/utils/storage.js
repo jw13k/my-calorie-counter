@@ -1,6 +1,7 @@
 /**
  * Dreamean - LocalStorage Utility Module
  */
+import { DEVELOPER_CONFIG } from '../config.js';
 
 const STORAGE_KEYS = {
     LEGACY_API_KEY: 'dreamean_openai_api_key', // For migration
@@ -18,13 +19,38 @@ const DEFAULT_CONFIG = {
 
 /**
  * Get the AI configuration, migrating legacy key if present.
+ * Supports falling back to developer's default configuration or server-side keys if user has not provided their own key.
  * @returns {Object} AI configuration
  */
 export function getAiConfig() {
     try {
         const data = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
         if (data) {
-            return { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+            const parsed = JSON.parse(data);
+            const merged = { ...DEFAULT_CONFIG, ...parsed };
+            // Fallback to developer config if user config has no apiKey
+            if (!merged.apiKey && DEVELOPER_CONFIG) {
+                if (DEVELOPER_CONFIG.apiKey) {
+                    return {
+                        ...merged,
+                        provider: DEVELOPER_CONFIG.provider,
+                        apiKey: DEVELOPER_CONFIG.apiKey,
+                        customBaseUrl: DEVELOPER_CONFIG.customBaseUrl || merged.customBaseUrl,
+                        customModel: DEVELOPER_CONFIG.customModel || merged.customModel,
+                        isDefaultDeveloperKey: true
+                    };
+                } else if (DEVELOPER_CONFIG.useServerDefaultKey) {
+                    return {
+                        ...merged,
+                        provider: DEVELOPER_CONFIG.provider,
+                        apiKey: 'SERVER_DEFAULT', // Placeholder to bypass client-side empty-checks
+                        customBaseUrl: DEVELOPER_CONFIG.customBaseUrl || merged.customBaseUrl,
+                        customModel: DEVELOPER_CONFIG.customModel || merged.customModel,
+                        isDefaultDeveloperKey: true
+                    };
+                }
+            }
+            return merged;
         }
         
         // Try migration from legacy key
@@ -37,6 +63,26 @@ export function getAiConfig() {
         }
     } catch (e) {
         console.error('Error reading AI configuration:', e);
+    }
+    
+    // Return developer config if no user configuration is saved
+    if (DEVELOPER_CONFIG) {
+        if (DEVELOPER_CONFIG.apiKey) {
+            return {
+                ...DEFAULT_CONFIG,
+                ...DEVELOPER_CONFIG,
+                isDefaultDeveloperKey: true
+            };
+        } else if (DEVELOPER_CONFIG.useServerDefaultKey) {
+            return {
+                ...DEFAULT_CONFIG,
+                provider: DEVELOPER_CONFIG.provider,
+                apiKey: 'SERVER_DEFAULT',
+                customBaseUrl: DEVELOPER_CONFIG.customBaseUrl,
+                customModel: DEVELOPER_CONFIG.customModel,
+                isDefaultDeveloperKey: true
+            };
+        }
     }
     return { ...DEFAULT_CONFIG };
 }

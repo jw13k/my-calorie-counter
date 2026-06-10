@@ -32,12 +32,19 @@ export class KeyManager {
         // Load initial key if exists
         const config = getAiConfig();
         if (config && config.apiKey) {
-            this.inputKey.value = config.apiKey;
+            // Mask developer's key from being explicitly shown in standard inputs
+            this.inputKey.value = config.isDefaultDeveloperKey ? '' : config.apiKey;
+            if (config.isDefaultDeveloperKey) {
+                this.inputKey.placeholder = '개발자 기본 Key 사용 중 (여기에 자신의 Key를 입력해 덮어쓰기 가능)';
+            } else {
+                this.inputKey.placeholder = 'sk-...';
+            }
             this.selectProvider.value = config.provider;
             this.inputCustomUrl.value = config.customBaseUrl || '';
             this.inputCustomModel.value = config.customModel || '';
             this.updateHeaderKeyIndicator(true);
         } else {
+            this.inputKey.placeholder = 'sk-...';
             this.updateHeaderKeyIndicator(false);
         }
 
@@ -95,7 +102,12 @@ export class KeyManager {
         // Refresh inputs from storage when opening
         const config = getAiConfig();
         this.selectProvider.value = config.provider;
-        this.inputKey.value = config.apiKey || '';
+        this.inputKey.value = config.isDefaultDeveloperKey ? '' : (config.apiKey || '');
+        if (config.isDefaultDeveloperKey) {
+            this.inputKey.placeholder = '개발자 기본 Key 사용 중 (자신의 Key로 덮어쓰기 가능)';
+        } else {
+            this.inputKey.placeholder = config.provider === 'openai' ? 'sk-...' : 'API Key';
+        }
         this.inputCustomUrl.value = config.customBaseUrl || '';
         this.inputCustomModel.value = config.customModel || '';
         
@@ -131,32 +143,40 @@ export class KeyManager {
         const customBaseUrl = this.inputCustomUrl.value.trim();
         const customModel = this.inputCustomModel.value.trim();
         
-        if (!apiKey) {
-            alert('API Key를 입력해 주세요. (연동 해제를 원할 시 창을 그냥 닫으시면 됩니다)');
-            return;
-        }
-
-        if (provider === 'custom' && !customBaseUrl) {
+        if (provider === 'custom' && !customBaseUrl && apiKey) {
             alert('Custom API의 Base URL을 입력해 주세요.');
             return;
         }
 
         const config = {
             provider,
-            apiKey,
+            apiKey, // Can be empty to revert back to default developer key if it exists
             customBaseUrl,
             customModel
         };
 
         saveAiConfig(config);
-        this.updateHeaderKeyIndicator(true);
+        
+        // Re-read configuration to verify if it falls back to developer key
+        const reloadedConfig = getAiConfig();
+        const hasKey = !!reloadedConfig.apiKey;
+        
+        this.updateHeaderKeyIndicator(hasKey);
         this.closeModal();
         
         if (this.callbacks.onSave) {
-            this.callbacks.onSave(config);
+            this.callbacks.onSave(reloadedConfig);
         }
         
-        this.showToast('AI API 연동 설정이 성공적으로 저장되었습니다.');
+        if (!apiKey) {
+            if (reloadedConfig.isDefaultDeveloperKey) {
+                this.showToast('API 설정이 초기화되었습니다. (개발자 기본 Key가 적용됩니다)');
+            } else {
+                this.showToast('API 연동 설정이 해제되었습니다.');
+            }
+        } else {
+            this.showToast('AI API 연동 설정이 성공적으로 저장되었습니다.');
+        }
     }
 
     updateHeaderKeyIndicator(hasKey) {
