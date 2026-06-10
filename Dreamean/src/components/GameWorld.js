@@ -24,24 +24,28 @@ export class GameWorld {
         this.gravity = 0.45;
         this.friction = 0.82;
         
-        // Player state (Modularized Player class)
-        this.player = new Player(400, 100);
+        // Player state (Modularized Player class, spawning at x=800, y=100)
+        this.player = new Player(800, 100);
         
-        // Platforms definition
+        // Platforms definition across a 1600px wide map
         this.platforms = [
-            // Main Island (Center)
-            { x: 200, y: 300, width: 400, height: 16, rx: 8 },
-            // Left Platform
-            { x: 50, y: 220, width: 100, height: 12, rx: 6 },
-            // Right Platform
-            { x: 650, y: 220, width: 100, height: 12, rx: 6 }
+            // Left Platform (Chest is here)
+            { x: 50, y: 240, width: 200, height: 16, rx: 8 },
+            // Stepping Platform Left
+            { x: 320, y: 270, width: 100, height: 12, rx: 6 },
+            // Main Center Island (Oracle is here)
+            { x: 500, y: 300, width: 600, height: 16, rx: 10 },
+            // Stepping Platform Right
+            { x: 1180, y: 270, width: 100, height: 12, rx: 6 },
+            // Right Platform (Mirror is here)
+            { x: 1350, y: 240, width: 200, height: 16, rx: 8 }
         ];
         
-        // Interactive Objects
+        // Interactive Objects repositioned across the 1600px wide map
         this.objects = {
             chest: {
-                x: 100,
-                y: 220 - 24,
+                x: 120,
+                y: 240 - 24,
                 width: 32,
                 height: 24,
                 label: '기억 상자',
@@ -50,8 +54,8 @@ export class GameWorld {
                 icon: 'archive'
             },
             oracle: {
-                x: 400,
-                y: 300 - 60, // Positioned slightly higher to fit the 4x larger size
+                x: 800,
+                y: 300 - 60, // Center of main platform (y=300)
                 radius: 45,  // 4x larger size
                 label: '해몽 수정구',
                 action: 'oracle',
@@ -62,8 +66,8 @@ export class GameWorld {
                 glowIntensity: 20
             },
             mirror: {
-                x: 700,
-                y: 220 - 32,
+                x: 1450,
+                y: 240 - 32,
                 width: 24,
                 height: 32,
                 label: '영혼의 거울',
@@ -78,6 +82,13 @@ export class GameWorld {
         this.oracleState = 'idle'; // 'idle', 'loading', 'success'
         this.oracleParticles = [];
         this.nearObject = null;
+        
+        // Cache the high-res HTML interaction prompt element
+        this.promptEl = document.getElementById('game-interaction-prompt');
+        
+        // Camera and scrolling state
+        this.mapWidth = 1600;
+        this.camera = { x: 400, y: 0 }; // Initialize centered around player spawn
         
         this.init();
     }
@@ -105,6 +116,77 @@ export class GameWorld {
             this.keys[e.code] = false;
             this.keys[e.key] = false;
         });
+
+        // Pointer down listener for mobile/mouse click interaction
+        this.canvas.addEventListener('pointerdown', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            
+            // Get click coordinates relative to canvas bounding box
+            const clickX = ((e.clientX - rect.left) / rect.width) * this.width;
+            const clickY = ((e.clientY - rect.top) / rect.height) * this.height;
+            
+            // Translate to logical world coordinates (taking camera horizontal scroll into account)
+            const worldClickX = clickX + this.camera.x;
+            const worldClickY = clickY;
+            
+            // 1. Oracle (Crystal Ball) - radius: 45, check distance from center
+            const oracle = this.objects.oracle;
+            const distOracle = Math.hypot(oracle.x - worldClickX, oracle.y - worldClickY);
+            if (distOracle < oracle.radius + 20) { // expanded hit radius for touch comfort
+                this.triggerInteraction(oracle);
+                return;
+            }
+            
+            // 2. Chest - width: 32, height: 24
+            const chest = this.objects.chest;
+            if (worldClickX >= chest.x - 20 && worldClickX <= chest.x + chest.width + 20 &&
+                worldClickY >= chest.y - 20 && worldClickY <= chest.y + chest.height + 20) {
+                this.triggerInteraction(chest);
+                return;
+            }
+            
+            // 3. Mirror - width: 24, height: 32
+            const mirror = this.objects.mirror;
+            if (worldClickX >= mirror.x - 20 && worldClickX <= mirror.x + mirror.width + 20 &&
+                worldClickY >= mirror.y - 20 && worldClickY <= mirror.y + mirror.height + 20) {
+                this.triggerInteraction(mirror);
+                return;
+            }
+        });
+
+        // Cursor hover pointer change
+        this.canvas.addEventListener('pointermove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const clickX = ((e.clientX - rect.left) / rect.width) * this.width;
+            const clickY = ((e.clientY - rect.top) / rect.height) * this.height;
+            const worldClickX = clickX + this.camera.x;
+            const worldClickY = clickY;
+            
+            let hover = false;
+            
+            // Oracle
+            const oracle = this.objects.oracle;
+            if (Math.hypot(oracle.x - worldClickX, oracle.y - worldClickY) < oracle.radius + 15) {
+                hover = true;
+            }
+            
+            // Chest
+            const chest = this.objects.chest;
+            if (!hover && worldClickX >= chest.x - 15 && worldClickX <= chest.x + chest.width + 15 &&
+                worldClickY >= chest.y - 15 && worldClickY <= chest.y + chest.height + 15) {
+                hover = true;
+            }
+            
+            // Mirror
+            const mirror = this.objects.mirror;
+            if (!hover && worldClickX >= mirror.x - 15 && worldClickX <= mirror.x + mirror.width + 15 &&
+                worldClickY >= mirror.y - 15 && worldClickY <= mirror.y + mirror.height + 15) {
+                hover = true;
+            }
+            
+            this.canvas.style.cursor = hover ? 'pointer' : 'default';
+        });
+
         
         // Run animation loop
         this.animate(0);
@@ -191,13 +273,13 @@ export class GameWorld {
     }
 
     update(timestamp) {
-        // Update Player instance physics, inputs, and boundaries
+        // Update Player instance physics, inputs, and boundaries (mapWidth 1600 passed instead of width 800)
         this.player.update(
             this.keys,
             this.controlsEnabled,
             this.gravity,
             this.friction,
-            this.width,
+            this.mapWidth,
             timestamp,
             () => {
                 // Jump particle burst callback
@@ -234,16 +316,23 @@ export class GameWorld {
 
         // Ground/Border boundaries
         if (this.player.y > this.height) {
-            // Respawn if falls off island
-            this.player.x = 400;
+            // Respawn if falls off island (respawns near center island)
+            this.player.x = 800;
             this.player.y = 100;
             this.player.vx = 0;
             this.player.vy = 0;
         }
 
+        // Smooth camera follow (Lerp horizontal tracking centered on player)
+        const playerCenterX = this.player.x + this.player.width / 2;
+        const targetCamX = playerCenterX - this.width / 2;
+        this.camera.x += (targetCamX - this.camera.x) * 0.08;
+        
+        // Clamp camera to map boundaries
+        this.camera.x = Math.max(0, Math.min(this.mapWidth - this.width, this.camera.x));
+
         // Interactive Object Proximity Detection
         this.nearObject = null;
-        const playerCenterX = this.player.x + this.player.width / 2;
         const playerCenterY = this.player.y + this.player.height / 2;
         
         // Check Oracle (crystal ball) - range expanded to 100 due to 4x size increase
@@ -301,6 +390,9 @@ export class GameWorld {
         this.ctx.scale(0.5, 0.5); // Scale logical 800x400 coordinates to physical 400x200 buffer
         
         this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        this.ctx.save();
+        this.ctx.translate(-this.camera.x, 0); // Translate canvas context relative to camera horizontal scroll
 
         // 1. Draw Platforms
         this.platforms.forEach(plat => {
@@ -448,41 +540,39 @@ export class GameWorld {
         // 4. Draw Player (Delegated to Player class)
         this.player.draw(this.ctx);
 
-        // 5. Draw Interaction Prompts
-        if (this.nearObject && this.controlsEnabled) {
-            this.ctx.save();
-            const obj = this.nearObject;
-            
-            // Draw interactive bubble dynamically above the target object's top edge
-            const bubbleY = obj.action === 'oracle' ? obj.y - obj.radius - 15 : obj.y - 18;
-            const bubbleX = obj.action === 'oracle' ? obj.x : obj.x + obj.width / 2;
-            
-            // Glass Bubble border
-            this.ctx.beginPath();
-            this.ctx.roundRect(bubbleX - 42, bubbleY - 22, 84, 18, 4);
-            this.ctx.fillStyle = 'rgba(11, 9, 20, 0.85)';
-            this.ctx.fill();
-            this.ctx.strokeStyle = obj.color;
-            this.ctx.lineWidth = 1;
-            this.ctx.stroke();
-            
-            // Triangle pin
-            this.ctx.beginPath();
-            this.ctx.moveTo(bubbleX - 4, bubbleY - 4);
-            this.ctx.lineTo(bubbleX + 4, bubbleY - 4);
-            this.ctx.lineTo(bubbleX, bubbleY);
-            this.ctx.closePath();
-            this.ctx.fillStyle = 'rgba(11, 9, 20, 0.85)';
-            this.ctx.fill();
-            
-            // Prompt Text
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = 'bold 9px sans-serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('[E] ' + obj.label, bubbleX, bubbleY - 10);
-            this.ctx.restore();
-        }
+        this.ctx.restore(); // Restore camera translation
         this.ctx.restore(); // Restore downscale transformation
+
+        // 5. Update HTML Interaction Prompt (Crisp & High-Res)
+        if (this.promptEl) {
+            if (this.nearObject && this.controlsEnabled) {
+                const obj = this.nearObject;
+                
+                // Get the physical size of the canvas container
+                const containerWidth = this.canvas.clientWidth;
+                const containerHeight = this.canvas.clientHeight;
+                
+                // scale factor from logical coordinate space (800x400) to actual container size
+                const scaleX = containerWidth / this.width;
+                const scaleY = containerHeight / this.height;
+                
+                // Calculate position relative to camera Horizontal Scroll
+                const bubbleX = obj.action === 'oracle' ? obj.x : obj.x + obj.width / 2;
+                const bubbleY = obj.action === 'oracle' ? obj.y - obj.radius - 8 : obj.y - 12;
+                
+                const screenX = (bubbleX - this.camera.x) * scaleX;
+                const screenY = bubbleY * scaleY;
+                
+                // Update content & styles
+                this.promptEl.textContent = `[E] ${obj.label}`;
+                this.promptEl.style.borderColor = obj.color;
+                this.promptEl.style.left = `${screenX}px`;
+                this.promptEl.style.top = `${screenY}px`;
+                this.promptEl.style.display = 'block';
+            } else {
+                this.promptEl.style.display = 'none';
+            }
+        }
     }
 
     animate(timestamp) {
