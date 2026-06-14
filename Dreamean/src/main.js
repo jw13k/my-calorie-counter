@@ -36,7 +36,13 @@ class App {
 
         // 2. Initialize Game World Engine
         this.gameWorld = new GameWorld('game-canvas', {
-            onInteract: (action) => this.handleGameInteraction(action)
+            onInteract: (action) => this.handleGameInteraction(action),
+            onClickBackground: () => {
+                if (this.currentDialogueState !== 'idle') {
+                    this.setDialogueState('idle');
+                }
+            },
+            isDialogueActive: () => this.currentDialogueState !== 'idle'
         });
 
         // 3. Dialogue DOM Bindings
@@ -150,8 +156,8 @@ class App {
                 return;
             }
 
-            // Greet state navigation: W/S or ArrowUp/ArrowDown, Enter/E to select
-            if (this.currentDialogueState === 'greet') {
+            // Greet or Tablet menu state navigation: W/S or ArrowUp/ArrowDown, Enter/E to select
+            if (this.currentDialogueState === 'greet' || this.currentDialogueState === 'tablet_menu') {
                 const buttons = this.dialogueOptions.querySelectorAll('.dialogue-opt-btn');
                 if (buttons.length === 0) return;
 
@@ -198,11 +204,12 @@ class App {
         this.dialogueMoodArea.style.display = 'none';
         this.dialogueOptions.innerHTML = '';
         
+        // Hide dialogue box in idle state, show as flex otherwise
+        this.dialogueBox.style.display = state === 'idle' ? 'none' : 'flex';
+        
         switch (state) {
             case 'idle':
                 this.gameWorld.enableControls(true);
-                this.dialogueSpeaker.innerText = '조작 안내';
-                this.dialogueText.innerText = '수정구슬에 가까이 다가가 [E] 키를 눌러 이야기를 나누어 보세요.';
                 break;
                 
             case 'greet':
@@ -211,10 +218,10 @@ class App {
                 this.dialogueText.innerText = '어서오세요, 몽상가여. 오늘 밤 당신의 무의식이 나침반이 될 것입니다. 당신의 꿈 조각을 내게 보여주시겠습니까?';
                 
                 // Add choice buttons
-                this.appendOption('🔮 네, 제 꿈을 해석해 주세요.', () => {
+                this.appendOption('대화하기', () => {
                     this.setDialogueState('dream_input');
                 });
-                this.appendOption('🌌 아니요, 그냥 지나가겠습니다.', () => {
+                this.appendOption('뒤로가기', () => {
                     this.setDialogueState('idle');
                 });
                 
@@ -228,9 +235,14 @@ class App {
                 this.dialogueSpeaker.innerText = '해몽의 수정구슬';
                 this.dialogueText.innerText = '어젯밤 꿈속에서 어떤 신비롭거나 이상한 일이 일어났는지 내게 자세히 들려주시겠습니까?';
                 this.dialogueInputArea.style.display = 'flex';
-                this.dialogueTextarea.value = '';
-                this.dialogueCharCount.innerText = '0';
+                this.dialogueTextarea.value = this.dreamContent || '';
+                this.dialogueCharCount.innerText = this.dreamContent ? this.dreamContent.length : '0';
                 this.dialogueTextarea.focus();
+                
+                // Add back button for dream_input
+                this.appendOption('뒤로가기', () => {
+                    this.setDialogueState('greet');
+                });
                 break;
                 
             case 'mood_input':
@@ -250,6 +262,29 @@ class App {
                 this.gameWorld.setOracleState('loading');
                 this.dialogueSpeaker.innerText = '무의식 탐색 중';
                 this.startLoadingMessages();
+                break;
+                
+            case 'tablet_menu':
+                this.gameWorld.enableControls(false);
+                this.dialogueSpeaker.innerText = '고대의 비석';
+                this.dialogueText.innerText = '비석에 새겨진 고대 문자 무늬가 푸른 빛으로 일렁입니다. 무엇을 확인하시겠습니까?';
+                
+                // Add choice buttons
+                this.appendOption('📁 기억 보관소 열기', () => {
+                    this.setDialogueState('idle');
+                    this.dreamVault.openVault();
+                });
+                this.appendOption('⚙️ AI API 설정 관리', () => {
+                    this.setDialogueState('idle');
+                    this.keyManager.openModal();
+                });
+                this.appendOption('🌌 그냥 지나가기', () => {
+                    this.setDialogueState('idle');
+                });
+                
+                this.activeOptionIndex = 0;
+                const optButtons = this.dialogueOptions.querySelectorAll('.dialogue-opt-btn');
+                this.highlightActiveOption(optButtons);
                 break;
         }
         
@@ -318,10 +353,8 @@ class App {
             if (this.currentDialogueState === 'idle') {
                 this.setDialogueState('greet');
             }
-        } else if (action === 'vault') {
-            this.dreamVault.openVault();
-        } else if (action === 'settings') {
-            this.keyManager.openModal();
+        } else if (action === 'tablet') {
+            this.setDialogueState('tablet_menu');
         }
     }
 

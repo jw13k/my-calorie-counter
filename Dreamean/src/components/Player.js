@@ -7,8 +7,9 @@ export class Player {
         this.y = y;
         this.vx = 0;
         this.vy = 0;
-        this.width = 24;
-        this.height = 38;
+        this.scale = 0.6; // Scale character down by 40%
+        this.width = 24 * this.scale;
+        this.height = 38 * this.scale;
         this.speed = 3.5;
         this.jumpStrength = -9.5;
         this.grounded = false;
@@ -21,7 +22,7 @@ export class Player {
      */
     update(keys, controlsEnabled, gravity, friction, screenWidth, timestamp, onJump) {
         // Player bobbing animation
-        this.bobOffset = Math.sin(timestamp * 0.006) * 2.5;
+        this.bobOffset = Math.sin(timestamp * 0.006) * 1.5;
 
         if (controlsEnabled) {
             // Apply movement keys
@@ -69,18 +70,24 @@ export class Player {
      */
     draw(ctx) {
         ctx.save();
+        
+        // Scale drawing from center of player's bounding box
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+        ctx.scale(this.scale, this.scale);
+        ctx.translate(-(this.x + 24 / 2), -(this.y + 38 / 2));
+        
         const drawX = this.x;
-        const drawY = this.y + this.bobOffset;
+        const drawY = this.y + this.bobOffset / this.scale;
         
         // Shadow beneath player
         ctx.beginPath();
-        ctx.ellipse(drawX + this.width / 2, this.y + this.height, 10 + this.bobOffset, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(drawX + 12, this.y + 38, 10 + (this.bobOffset / this.scale), 3, 0, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(5, 4, 9, 0.45)';
         ctx.fill();
 
         // Player Outer Cloak
         ctx.beginPath();
-        ctx.roundRect(drawX, drawY + 8, this.width, this.height - 8, [10, 10, 2, 2]);
+        ctx.roundRect(drawX, drawY + 8, 24, 30, [10, 10, 2, 2]);
         ctx.fillStyle = 'rgba(121, 40, 202, 0.85)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(226, 91, 245, 0.5)';
@@ -89,7 +96,7 @@ export class Player {
         
         // Cloak Hood
         ctx.beginPath();
-        ctx.arc(drawX + this.width / 2, drawY + 12, 11, 0, Math.PI * 2);
+        ctx.arc(drawX + 12, drawY + 12, 11, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(19, 16, 34, 0.95)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(226, 91, 245, 0.6)';
@@ -98,11 +105,11 @@ export class Player {
         // Glowing Eyes
         ctx.beginPath();
         if (this.direction === 'right') {
-            ctx.arc(drawX + this.width / 2 + 3, drawY + 12, 2, 0, Math.PI * 2);
-            ctx.arc(drawX + this.width / 2 + 8, drawY + 12, 2, 0, Math.PI * 2);
+            ctx.arc(drawX + 12 + 3, drawY + 12, 2, 0, Math.PI * 2);
+            ctx.arc(drawX + 12 + 8, drawY + 12, 2, 0, Math.PI * 2);
         } else {
-            ctx.arc(drawX + this.width / 2 - 8, drawY + 12, 2, 0, Math.PI * 2);
-            ctx.arc(drawX + this.width / 2 - 3, drawY + 12, 2, 0, Math.PI * 2);
+            ctx.arc(drawX + 12 - 8, drawY + 12, 2, 0, Math.PI * 2);
+            ctx.arc(drawX + 12 - 3, drawY + 12, 2, 0, Math.PI * 2);
         }
         ctx.fillStyle = '#00f2fe';
         ctx.shadowBlur = 4;
@@ -112,7 +119,7 @@ export class Player {
         
         // Lantern or light staff
         ctx.beginPath();
-        const lanternX = this.direction === 'right' ? drawX + this.width + 2 : drawX - 2;
+        const lanternX = this.direction === 'right' ? drawX + 24 + 2 : drawX - 2;
         const lanternY = drawY + 20;
         ctx.arc(lanternX, lanternY, 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 138, 0, 0.9)';

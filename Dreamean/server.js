@@ -60,8 +60,8 @@ const server = http.createServer(async (req, res) => {
                 const { provider, dreamContent, mood, customBaseUrl, customModel } = payload;
                 let apiKey = payload.apiKey;
 
-                // Fallback to environment variables if no user key is provided (keeps keys secure on server-side)
-                if (!apiKey) {
+                // Fallback to environment variables if no user key is provided or is placeholder
+                if (!apiKey || apiKey === 'SERVER_DEFAULT') {
                     if (provider === 'openai') apiKey = process.env.OPENAI_API_KEY;
                     else if (provider === 'gemini') apiKey = process.env.GEMINI_API_KEY;
                     else if (provider === 'anthropic') apiKey = process.env.ANTHROPIC_API_KEY;

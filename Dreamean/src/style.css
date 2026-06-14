@@ -141,15 +141,18 @@ body {
 
 /* Application Container Layout */
 .app-container {
-    position: relative;
-    max-width: 1200px;
-    width: 100%;
-    margin: 0 auto;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     padding: 0 24px;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    z-index: 1;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 10;
+    overflow: hidden;
 }
 
 /* Header Styles */
@@ -159,6 +162,7 @@ body {
     align-items: center;
     padding: 24px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    pointer-events: auto;
 }
 
 .logo-area {
@@ -276,92 +280,43 @@ body {
    GAME PLATFORMER & IN-GAME RETRO DIALOGUE STYLES
    ========================================================================== */
 
-.game-viewport-wrapper {
-    max-width: 800px;
-    width: 100%;
-    margin: 0 auto 20px auto;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-}
-
-.game-canvas-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 2 / 1;
-    background: radial-gradient(circle at 50% 120%, #150f2e 0%, #06040a 100%);
-    overflow: hidden;
-}
-
 #game-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: -webkit-crisp-edges;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    background: transparent;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
-}
-
-/* Dynamic HTML interaction prompt bubble */
-.game-interaction-prompt {
-    position: absolute;
-    transform: translate(-50%, -100%);
-    background: rgba(11, 9, 20, 0.93);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    padding: 6px 12px;
-    color: #ffffff;
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 0.8rem;
-    text-align: center;
-    white-space: nowrap;
-    pointer-events: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
-    z-index: 15;
-    transition: opacity 0.15s ease, border-color 0.15s ease;
-}
-
-.game-interaction-prompt::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px 5px 0;
-    border-style: solid;
-    border-color: rgba(11, 9, 20, 0.93) transparent;
     display: block;
-    width: 0;
 }
-
 
 /* Embedded Scroll Result Panel overlay */
 .game-result-scroll {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
-    background: rgba(9, 7, 15, 0.93);
-    border: 1px solid rgba(0, 242, 254, 0.2);
-    border-radius: 16px;
-    padding: 24px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 850px;
+    height: 80vh;
+    background: rgba(9, 7, 15, 0.96);
+    border: 1px solid rgba(0, 242, 254, 0.25);
+    border-radius: 24px;
+    padding: 30px;
     overflow-y: auto;
-    z-index: 10;
-    box-shadow: 0 10px 40px rgba(0, 242, 254, 0.15), inset 0 0 20px rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
+    z-index: 100;
+    box-shadow: 0 20px 60px rgba(0, 242, 254, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    pointer-events: auto;
     animation: scroll-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes scroll-slide-in {
-    0% { transform: translateY(30px) scale(0.95); opacity: 0; }
-    100% { transform: translateY(0) scale(1); opacity: 1; }
+    0% { transform: translate(-50%, -40%) scale(0.95); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 .close-overlay-btn {
@@ -479,14 +434,22 @@ body {
 .dialogue-box {
     display: flex;
     background: rgba(11, 9, 20, 0.92);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 20px;
     gap: 20px;
     min-height: 135px;
-    position: relative;
-    z-index: 5;
-    border-bottom-left-radius: 20px;
-    border-bottom-right-radius: 20px;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 800px;
+    z-index: 10;
+    border-radius: 16px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    pointer-events: auto;
 }
 
 .dialogue-portrait {
@@ -673,14 +636,26 @@ body {
 
 /* Control tips footer */
 .controls-tips-wrapper {
+    position: fixed;
+    bottom: 185px;
+    left: 50%;
+    transform: translateX(-50%);
     max-width: 800px;
-    width: 100%;
-    margin: 0 auto;
+    width: 90%;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     font-size: 0.8rem;
     color: var(--text-muted);
+    background: rgba(11, 9, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 8px 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    pointer-events: auto;
+    z-index: 9;
 }
 
 .tips-title {
@@ -1123,21 +1098,45 @@ body {
 
 /* Footer Section */
 .app-footer {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
     text-align: center;
-    padding: 30px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0;
+    border-top: none;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.5;
+    width: 100%;
 }
 
 .footer-quote {
-    font-style: italic;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 12px;
+    display: none;
 }
 
 .footer-copyright {
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+}
+
+/* Intro instructions banner */
+.intro-section {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 90%;
+    max-width: 600px;
+    z-index: 5;
+    pointer-events: none;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.intro-section.fade-out {
+    opacity: 0;
+    transform: translate(-50%, -20px);
 }
 
 /* ==========================================================================

@@ -9,7 +9,7 @@
  * which reads the real keys from server environment variables.
  */
 export const DEVELOPER_CONFIG = {
-    provider: 'openai', // Default provider: 'openai', 'gemini', 'anthropic', or 'custom'
+    provider: 'gemini', // Default provider: 'openai', 'gemini', 'anthropic', or 'custom'
     useServerDefaultKey: true, // Set to true to utilize backend proxy's environment variables
     apiKey: '', // Developer's default API key (Leave empty if using server environment variables)
     customBaseUrl: '',
