@@ -43,6 +43,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -50,7 +51,7 @@ jobs:
           port: 22
           timeout: 60s
           command_timeout: 10m
-          envs: REPO_URL
+          envs: REPO_URL,GEMINI_API_KEY
           script: |
             set -e
             echo "▶ 배포 시작: $(date)"
@@ -66,6 +67,10 @@ jobs:
             echo "▶ 최신 코드 pull"
             git fetch origin main
             git reset --hard origin/main
+
+            echo "▶ 환경변수 갱신"
+            echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+            chmod 600 .env
 
             echo "▶ 새 이미지 빌드 + 컨테이너 재기동"
             docker compose up -d --build

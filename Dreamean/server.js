@@ -47,9 +47,38 @@ const MIME_TYPES = {
     '.webp': 'image/webp'
 };
 
-const server = http.createServer(async (req, res) => {
+// Simple in-memory rate limiter to protect API quota
+const rateLimitMap = new Map();
+
+const server = http.createServer((req, res) => {
     // 1. API Route: POST /api/interpret
-    if (req.method === 'POST' && req.url === '/api/interpret') {
+    if (req.url === '/api/interpret') {
+        // Only allow POST requests
+        if (req.method !== 'POST') {
+            res.writeHead(405);
+            res.end('Method Not Allowed');
+            return;
+        }
+
+        // 1. IP Rate Limiting (Max 5 requests per minute per IP)
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const now = Date.now();
+        if (rateLimitMap.has(ip)) {
+            const data = rateLimitMap.get(ip);
+            if (now - data.time < 60000) { // Within 1 minute
+                if (data.count >= 5) {
+                    res.writeHead(429, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: { message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요. (Too many requests)' } }));
+                    return;
+                }
+                data.count++;
+            } else {
+                rateLimitMap.set(ip, { time: now, count: 1 }); // Reset counter
+            }
+        } else {
+            rateLimitMap.set(ip, { time: now, count: 1 });
+        }
+
         let body = '';
         req.on('data', chunk => {
             body += chunk;
