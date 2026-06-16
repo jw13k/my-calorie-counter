@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DREAMEAN - 무의식의 틈새</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="src/style.css">
+</head>
+
+<body>
+    <!-- 3D Room Renderer -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- DREAMEan Logo -->
+    <div id="game-logo"
+        style="position: absolute; top: 20px; left: 30px; font-family: 'Caveat', cursive; font-size: 40px; font-weight: 700; color: #000000; z-index: 5; pointer-events: none; letter-spacing: 2px;">
+        DREAMean
+    </div>
+
+    <!-- OS UI Overlay (Hidden by default) -->
+    <div id="os-environment" class="os-hidden">
+        <!-- The OS screen bounds (matching the 3rd concept art) -->
+        <div class="os-screen">
+            <!-- Wallpaper -->
+            <div class="os-wallpaper">
+                <div class="smiley-face">
+                    <div class="eyes">
+                        <div class="eye"></div>
+                        <div class="eye"></div>
+                    </div>
+                    <div class="smile"></div>
+                </div>
+            </div>
+
+            <!-- Window Container (Apps will open here) -->
+            <div id="os-window-container"></div>
+
+            <!-- Start Menu Overlay -->
+            <div class="os-start-menu hidden" id="start-menu">
+                <div class="menu-item" data-app="dream">
+                    <i data-lucide="sparkles"></i> 꿈 기록 (Dream Input)
+                </div>
+                <div class="menu-item" data-app="archive">
+                    <i data-lucide="folder-open"></i> 보관소 (Archive)
+                </div>
+                <div class="menu-item" data-app="settings">
+                    <i data-lucide="settings"></i> 설정 (Settings)
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item danger" id="btn-shutdown">
+                    <i data-lucide="power"></i> 종료 (Exit to Room)
+                </div>
+            </div>
+
+            <!-- Taskbar -->
+            <div class="os-taskbar">
+                <button class="taskbar-start" id="btn-start-menu">
+                    <i data-lucide="cpu"></i> START
+                </button>
+                <div class="taskbar-apps" id="taskbar-apps">
+                    <!-- Open apps will appear here -->
+                </div>
+                <div class="taskbar-tray">
+                    <span id="tray-time">12:00 PM</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Module Execution -->
+    <script type="module" src="src/main.js"></script>
+</body>
+
+</html>

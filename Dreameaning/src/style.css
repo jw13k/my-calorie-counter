@@ -1,0 +1,300 @@
+/* DREAMEAN - Minimalist Black & White Base Styles */
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --border-color: #000000;
+    --font-main: 'Plus Jakarta Sans', sans-serif;
+    
+    --os-window-bg: #ffffff;
+    --os-window-border: 2px solid #000000;
+    --os-taskbar-bg: #ffffff;
+    --os-taskbar-border: 2px solid #000000;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    overflow: hidden; /* No scrolling */
+    user-select: none;
+}
+
+/* Canvas Engine */
+#game-canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    cursor: crosshair;
+}
+
+/* OS UI Overlay */
+#os-environment {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 100;
+    pointer-events: none; /* Let canvas receive clicks unless interacting with OS */
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#os-environment.active {
+    opacity: 1;
+    pointer-events: auto; /* OS takes over clicks */
+}
+
+.os-hidden {
+    visibility: hidden;
+}
+
+/* The Screen Frame (Matches concept art 3) */
+.os-screen {
+    width: 80vw;
+    height: 80vh;
+    max-width: 1000px;
+    max-height: 700px;
+    background: var(--bg-color);
+    border: var(--os-window-border);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 10px 10px 0px 0px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+}
+
+/* OS Wallpaper (Smiley Face) */
+.os-wallpaper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+.smiley-face {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+.smiley-face .eyes {
+    display: flex;
+    gap: 100px;
+}
+
+.smiley-face .eye {
+    width: 6px;
+    height: 40px;
+    background: var(--text-color);
+    border-radius: 3px;
+}
+
+.smiley-face .smile {
+    width: 180px;
+    height: 60px;
+    border-bottom: 6px solid var(--text-color);
+    border-radius: 0 0 90px 90px;
+}
+
+/* OS Window Container */
+#os-window-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 40px); /* Leave room for taskbar */
+    z-index: 10;
+}
+
+/* OS Taskbar */
+.os-taskbar {
+    height: 40px;
+    border-top: var(--os-taskbar-border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    background: var(--os-taskbar-bg);
+    z-index: 20;
+    position: relative;
+}
+
+.taskbar-start {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.1s;
+}
+
+.taskbar-start:hover, .taskbar-start.active {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
+
+.taskbar-apps {
+    flex: 1;
+    display: flex;
+    gap: 5px;
+    margin-left: 10px;
+    overflow-x: auto;
+}
+
+.taskbar-tray {
+    padding: 0 10px;
+    border-left: 2px solid var(--border-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Start Menu */
+.os-start-menu {
+    position: absolute;
+    bottom: 40px; /* Above taskbar */
+    left: -2px; /* Align with left border */
+    width: 250px;
+    background: var(--bg-color);
+    border: var(--os-window-border);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+}
+
+.os-start-menu.hidden {
+    display: none;
+}
+
+.menu-item {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.1s;
+}
+
+.menu-item:hover {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
+
+.menu-item.danger:hover {
+    background: #ff0000;
+    color: white;
+}
+
+.menu-divider {
+    height: 2px;
+    background: var(--border-color);
+}
+
+/* OS Window Base Style */
+.os-window {
+    position: absolute;
+    background: var(--os-window-bg);
+    border: var(--os-window-border);
+    display: flex;
+    flex-direction: column;
+    min-width: 400px;
+    min-height: 300px;
+    box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.2);
+}
+
+.window-header {
+    height: 30px;
+    border-bottom: var(--os-window-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    background: var(--bg-color);
+    cursor: move;
+    user-select: none;
+}
+
+.window-title {
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.window-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.win-btn {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+}
+.win-btn:hover {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
+
+.window-content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* App Specific Styles (To be added later) */
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.text-input {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid var(--border-color);
+    font-family: inherit;
+    resize: vertical;
+}
+.btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+.btn:hover {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
