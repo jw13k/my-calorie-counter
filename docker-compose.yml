@@ -36,7 +36,7 @@ services:
 
     # OOM 발생 시 docker가 재기동 (Dockerfile HEALTHCHECK와 함께 동작)
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/').read()"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7860/ || exit 1"]
       interval: 30s
       timeout: 5s
       start_period: 60s

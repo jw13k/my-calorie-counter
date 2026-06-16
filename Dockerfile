@@ -4,8 +4,8 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Dreamean 내부의 모든 소스를 컨테이너 최상위로 복사
-COPY Dreamean ./
+# Dreameaning 내부의 모든 소스를 컨테이너 최상위로 복사
+COPY Dreameaning ./
 
 # 환경변수 설정 (docker-compose에 맞춰 7860으로 설정)
 ENV PORT=7860
