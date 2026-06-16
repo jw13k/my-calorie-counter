@@ -3,13 +3,14 @@ import { Player } from './engine/Player.js';
 import { GameWorld } from './engine/GameWorld.js';
 import { DesktopManager } from './os/DesktopManager.js';
 import { initApps } from './os/apps/AppRegistry.js';
+import { RoomConfig } from './engine/RoomConfig.js';
 
 initApps();
 
 class Game {
     constructor() {
         this.renderer = new Renderer('game-canvas');
-        this.player = new Player(0, 100);
+        this.player = new Player(RoomConfig.player.spawnX, RoomConfig.player.spawnY);
         this.world = new GameWorld(this.renderer, this.player);
         this.desktop = new DesktopManager();
         
