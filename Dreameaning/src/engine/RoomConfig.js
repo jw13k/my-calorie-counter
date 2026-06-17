@@ -14,7 +14,16 @@ export const RoomConfig = {
     camera: {
         transitionDuration: 0.83, // 방 이동 시 카메라가 넘어가는 데 걸리는 시간 (초 단위)
         easing: 'easeInOutCubic', // 사용 가능한 효과: 'linear', 'easeOutCubic', 'easeInOutCubic'
-        panMultiplier: 0.2        // 카메라 이동 거리 배율 (1.0 = 정확한 방 크기만큼 이동, 더 크면 과장되게 휙 지나감)
+        panMultiplier: 0.05,       // 카메라 이동 거리 배율 (1.0 = 정확한 방 크기만큼 이동, 더 크면 과장되게 휙 지나감)
+
+        // 각 문을 통과할 때 카메라가 이동하는 방향 부호 설정 (x축 부호, y축 부호)
+        // 1은 정방향, -1은 역방향입니다. 직접 값을 수정하여 카메라가 넘어가는 방향을 맞추세요!
+        directions: {
+            topLeft: { x: -1, y: 1 }, // 좌상단 문 통과 시
+            topRight: { x: 1, y: 1 }, // 우상단 문 통과 시
+            bottomRight: { x: 1, y: -1 }, // 우하단 문 통과 시
+            bottomLeft: { x: -1, y: -1 }  // 좌하단 문 통과 시
+        }
     },
 
     // ----------------------------------------------------
@@ -47,7 +56,7 @@ export const RoomConfig = {
         height: 140,            // 문의 세로 높이
         positionProgress: 0.5,  // 바닥 경계선을 따라 문이 위치하는 비율 (0.0: 완전 중앙, 1.0: 양쪽 끝 모서리)
         yOffset: 0,             // 문을 위아래로 임의로 들어올리거나 내릴 수 있는 Y축 보정값
-        triggerSize: 0.2,       // 플레이어가 문의 중심(positionProgress)으로부터 얼만큼 가까워야 방이동을 판정할지 (기본 0.2)
+        triggerSize: 0.1,       // 플레이어가 문의 중심(positionProgress)으로부터 얼만큼 가까워야 방이동을 판정할지 (기본 0.2)
 
         // 안쪽 입체감을 유저가 마음대로 만들 수 있는 구조 (중심점 1개 + 가장자리 3개의 점을 연결)
         leftInner: {

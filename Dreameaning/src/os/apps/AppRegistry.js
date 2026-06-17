@@ -251,23 +251,23 @@ function initArchiveApp(container) {
 }
 
 function initSettingsApp(container) {
-    const config = getSetting('ai_config', { provider: 'developer', apiKey: '', customBaseUrl: '', customModel: '' });
+    const config = getSetting('ai_config', { provider: 'gemini', apiKey: '', customBaseUrl: '', customModel: '' });
     
     container.innerHTML = `
         <div class="form-group">
             <label>AI Provider 선택</label>
             <select id="api-provider-select" class="text-input">
-                <option value="developer" ${config.provider === 'developer' ? 'selected' : ''}>개발자 모드 (기본 내장, Key 필요 없음)</option>
+                <option value="gemini" ${config.provider === 'gemini' ? 'selected' : ''}>Google Gemini (기본 내장 AI)</option>
                 <option value="openai" ${config.provider === 'openai' ? 'selected' : ''}>OpenAI (gpt-4o-mini)</option>
-                <option value="gemini" ${config.provider === 'gemini' ? 'selected' : ''}>Google Gemini (1.5-flash)</option>
                 <option value="anthropic" ${config.provider === 'anthropic' ? 'selected' : ''}>Anthropic Claude (3-haiku)</option>
                 <option value="custom" ${config.provider === 'custom' ? 'selected' : ''}>Custom (개인 서버/로컬 등)</option>
+                <option value="developer" ${config.provider === 'developer' ? 'selected' : ''}>개발자 모드 (테스트용 가짜 데이터)</option>
             </select>
         </div>
         
         <div id="group-api-key" class="form-group" style="${config.provider === 'developer' ? 'display: none;' : ''}">
-            <label id="api-key-label">API Key</label>
-            <input type="password" id="input-api-key" class="text-input" value="${config.apiKey || ''}">
+            <label id="api-key-label">API Key (비워두면 기본 시스템 키 사용)</label>
+            <input type="password" id="input-api-key" class="text-input" value="${config.apiKey === 'SERVER_DEFAULT' ? '' : (config.apiKey || '')}" placeholder="직접 발급받은 키가 있다면 입력하세요">
         </div>
 
         <div id="group-custom-url" class="form-group" style="${config.provider === 'custom' ? '' : 'display: none;'}">

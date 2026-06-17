@@ -30,7 +30,7 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 무의식 연구원이자 깊�
 대답은 오직 상기 JSON 규격을 만족하는 순수한 JSON 텍스트여야 합니다.`;
 
 export async function interpretDream(dreamContent, mood = 'peaceful') {
-    const config = getSetting('ai_config', { provider: 'developer' });
+    const config = getSetting('ai_config', { provider: 'gemini', apiKey: '' });
     const userPrompt = `꿈 내용: "${dreamContent}"\n선택한 감정 분위기: "${translateMood(mood)}"`;
 
     if (config.provider === 'developer') {

@@ -60,8 +60,18 @@ const server = http.createServer((req, res) => {
             return;
         }
 
+        // 0. CORS / Origin, Referer 방어 (타 도메인 접근 금지)
+        const origin = req.headers['origin'] || req.headers['referer'] || '';
+        if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1') && !origin.includes('aiweb2026.site') && !origin.includes('134.185.101.1')) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: { message: '비정상적인 접근입니다. (Forbidden)' } }));
+            return;
+        }
+
         // 1. IP Rate Limiting (Max 5 requests per minute per IP)
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        // CF-Connecting-IP 우선 확인, X-Forwarded-For는 여러 개일 수 있으므로 첫 번째 IP만 정확히 추출
+        const xForwardedFor = req.headers['x-forwarded-for'] || '';
+        const ip = req.headers['cf-connecting-ip'] || xForwardedFor.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
         const now = Date.now();
         if (rateLimitMap.has(ip)) {
             const data = rateLimitMap.get(ip);
@@ -82,6 +92,10 @@ const server = http.createServer((req, res) => {
         let body = '';
         req.on('data', chunk => {
             body += chunk;
+            // Payload Size Limit (1MB) - 10GB 등 대용량 데이터로 인한 메모리 OOM 공격 방어
+            if (body.length > 1e6) {
+                req.connection.destroy(); // 1MB 초과 시 즉시 연결 강제 종료
+            }
         });
         req.on('end', async () => {
             try {
@@ -139,8 +153,10 @@ const server = http.createServer((req, res) => {
     }
 
     // 2. Serve Static Files
-    let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
-    
+    // 쿼리 스트링(?v=1.2 등)이 붙어있을 경우 제거하여 순수 파일 경로만 추출 (캐시 버스팅 방해 금지)
+    const cleanUrl = req.url.split('?')[0];
+    let filePath = path.join(__dirname, cleanUrl === '/' ? 'index.html' : cleanUrl);
+
     // Prevent directory traversal attacks
     if (!filePath.startsWith(__dirname)) {
         res.writeHead(403);

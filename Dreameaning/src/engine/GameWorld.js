@@ -446,20 +446,29 @@ export class GameWorld {
             const doorSize = RoomConfig.doors.triggerSize || 0.2;
             const prog = RoomConfig.doors.positionProgress;
             let dirX = 0, dirY = 0;
+            let camDirX = 0, camDirY = 0;
             let jumpedA = a, jumpedB = b;
 
             // Check if player walked through a door
             if (a < 0 && Math.abs(b - prog) < doorSize) {
-                dirX = -this.W; dirY = -this.R / 2; // 좌상단
+                dirX = -this.W; dirY = -this.R / 2; // 물리적 이동: 좌상단
+                const conf = RoomConfig.camera.directions?.topLeft || { x: -1, y: -1 };
+                camDirX = conf.x * this.W; camDirY = conf.y * this.R / 2;
                 jumpedA = 1;
             } else if (b < 0 && Math.abs(a - prog) < doorSize) {
-                dirX = this.W; dirY = -this.R / 2;  // 우상단
+                dirX = this.W; dirY = -this.R / 2;  // 물리적 이동: 우상단
+                const conf = RoomConfig.camera.directions?.topRight || { x: 1, y: -1 };
+                camDirX = conf.x * this.W; camDirY = conf.y * this.R / 2;
                 jumpedB = 1;
             } else if (a > 1 && Math.abs(b - prog) < doorSize) {
-                dirX = this.W; dirY = this.R / 2;   // 우하단
+                dirX = this.W; dirY = this.R / 2;   // 물리적 이동: 우하단
+                const conf = RoomConfig.camera.directions?.bottomRight || { x: 1, y: 1 };
+                camDirX = conf.x * this.W; camDirY = conf.y * this.R / 2;
                 jumpedA = 0;
             } else if (b > 1 && Math.abs(a - prog) < doorSize) {
-                dirX = -this.W; dirY = this.R / 2;  // 좌하단
+                dirX = -this.W; dirY = this.R / 2;  // 물리적 이동: 좌하단
+                const conf = RoomConfig.camera.directions?.bottomLeft || { x: -1, y: 1 };
+                camDirX = conf.x * this.W; camDirY = conf.y * this.R / 2;
                 jumpedB = 0;
             }
 
@@ -467,10 +476,11 @@ export class GameWorld {
             if (dirX !== 0 || dirY !== 0) {
                 this.transitioning = true;
                 this.transitionProgress = 0;
-                this.transitionDir = { x: dirX, y: dirY };
+                this.transitionDir = { x: camDirX, y: camDirY }; // 카메라는 커스텀 방향 적용
 
                 const fixed = this.toScreen(jumpedA, jumpedB);
                 const spawnOffset = RoomConfig.player.spawnOffsetAfterDoor || 10;
+                // 플레이어 스폰 위치는 변함없는 물리적 방향(dirX, dirY) 적용
                 this.player.x = fixed.x - (dirX / Math.hypot(dirX, dirY)) * spawnOffset;
                 this.player.y = fixed.y - (dirY / Math.hypot(dirX, dirY)) * spawnOffset;
             } else {
