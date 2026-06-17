@@ -48,6 +48,7 @@ function initDreamApp(container) {
                     🔢 숫자: ${data.luckyElements.number}<br>
                     ✨ 추천 행동: ${data.luckyElements.action}
                 </div>
+                ${data.quote ? `<div style="margin-top: 15px; padding: 15px; border-left: 4px solid #333; background: #f9f9f9; font-style: italic; color: #555; text-align: center;">"${data.quote}"</div>` : ''}
             `;
             resultDiv.innerHTML = html;
             saveDream({ text, title: data.title, interpretationHtml: html, date: new Date().toISOString() });
@@ -226,6 +227,7 @@ function initArchiveApp(container) {
                                     🔢 숫자: ${data.luckyElements.number}<br>
                                     ✨ 추천 행동: ${data.luckyElements.action}
                                 </div>
+                                ${data.quote ? `<div style="margin-top: 15px; padding: 15px; border-left: 4px solid #333; background: #f9f9f9; font-style: italic; color: #555; text-align: center;">"${data.quote}"</div>` : ''}
                             `;
                             
                             updateDream(id, { text: newText, title: data.title, interpretationHtml: html });

@@ -4,6 +4,11 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 무의식 연구원이자 깊�
 사용자가 입력한 꿈의 묘사와 감정 톤을 토대로, 시적이며 통찰력 가득한 해몽 결과를 작성해 주세요. 
 사용자에게 위로와 성찰, 그리고 기분 좋은 신비감을 주어야 합니다.
 
+[중요 지침]
+1. 언어 및 어조: 모든 답변은 반드시 자연스러운 한국어(Korean)로 작성하며, 방문자를 존중하는 부드럽고 다정한 경어체(~해요, ~습니다)를 일관되게 사용하세요.
+2. 예외 처리: 사용자의 입력이 너무 짧거나(예: "ㅋㅋ", "없음") 무의미한 단어일 경우, 무시하거나 거절하지 말고 '무의식의 문턱에서 기억이 흐려진 상태'나 '내면이 깊은 휴식을 취한 상태' 등으로 자연스럽고 시적으로 포장해 해석해 주세요.
+3. 악몽/트라우마 대응: 꿈의 내용이 폭력적, 부정적, 혹은 무서운 내용이더라도 절대 공포감을 조장하지 마세요. 대신 낡은 자아가 허물어지고 새로운 자아로 탈바꿈하는 '치유와 성장의 과정'으로 긍정적이고 따뜻하게 승화시켜 해석하세요.
+
 반드시 다음 JSON 형식을 엄격히 지켜 응답해 주세요. 키 이름과 구조를 정확히 일치시켜야 합니다:
 {
   "title": "꿈의 내용과 상징을 아우르는 시적이고 아름다운 제목 (예: 푸른 고래가 그린 은하수 길)",
@@ -24,7 +29,8 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 무의식 연구원이자 깊�
     "color": "오늘의 운세를 터뜨릴 수 있는 행운의 색상과 그 간단한 이유",
     "number": "행운의 숫자 (1~45 사이에서 1~3개 제안)",
     "action": "오늘 하루 무의식의 긍정적인 힘을 현실로 이끌어내기 위해 실천해볼 가벼운 추천 행동"
-  }
+  },
+  "quote": "꿈의 의미를 함축하여 유저에게 깊은 여운을 주는 짧은 치유의 시구절이나 한 줄 명언 (직접 창작)"
 }
 
 대답은 오직 상기 JSON 규격을 만족하는 순수한 JSON 텍스트여야 합니다.`;
@@ -46,7 +52,8 @@ export async function interpretDream(dreamContent, mood = 'peaceful') {
                         color: "에메랄드 그린",
                         number: "7, 14",
                         action: "오늘 하루, 평소 가지 않던 길로 산책해보기"
-                    }
+                    },
+                    quote: "\"깨어난 뒤에도 마음속에 남은 작은 조각들은, 당신이 아직 가보지 않은 내일의 지도입니다.\""
                 });
             }, 1500);
         });
@@ -161,9 +168,10 @@ async function callGemini(apiKey, userPrompt) {
                     action: { type: 'STRING' }
                 },
                 required: ['color', 'number', 'action']
-            }
+            },
+            quote: { type: 'STRING' }
         },
-        required: ['title', 'summary', 'psychology', 'mysticalMeaning', 'symbols', 'luckyElements']
+        required: ['title', 'summary', 'psychology', 'mysticalMeaning', 'symbols', 'luckyElements', 'quote']
     };
 
     const response = await fetch(url, {
