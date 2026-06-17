@@ -86,6 +86,7 @@ export class DesktopManager {
         if (appId === 'dream') { title = '꿈 기록 (Dream Input)'; content = '<div id="app-dream"></div>'; icon = 'cloud'; }
         if (appId === 'archive') { title = '보관소 (Archive)'; content = '<div id="app-archive"></div>'; icon = 'folder-open'; }
         if (appId === 'settings') { title = '설정 (Settings)'; content = '<div id="app-settings"></div>'; icon = 'settings'; }
+        if (appId === 'pong') { title = 'Ping Pong (Easter Egg)'; content = '<div id="app-pong" style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; background:#000;"></div>'; icon = 'gamepad-2'; }
 
         this.createWindow(appId, title, content, icon);
         

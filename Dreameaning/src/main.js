@@ -46,6 +46,14 @@ class Game {
         window.exitComputerInteraction = () => {
             this.exitComputerInteraction();
         };
+
+        // Easter egg
+        const easterEggEyes = document.getElementById('easter-egg-eyes');
+        if (easterEggEyes) {
+            easterEggEyes.addEventListener('click', () => {
+                this.desktop.openApp('pong');
+            });
+        }
     }
 
     startComputerInteraction() {

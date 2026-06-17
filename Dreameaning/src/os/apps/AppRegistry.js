@@ -10,24 +10,35 @@ export function initApps() {
         if (appId === 'dream') initDreamApp(container);
         if (appId === 'archive') initArchiveApp(container);
         if (appId === 'settings') initSettingsApp(container);
+        if (appId === 'pong') initPongApp(container);
     });
 }
 
 function initDreamApp(container) {
     container.innerHTML = `
-        <div class="form-group">
-            <label>어떤 꿈을 꾸셨나요?</label>
-            <textarea id="dream-input" class="text-input" rows="5"></textarea>
+        <div id="dream-input-section">
+            <div class="form-group">
+                <label>어떤 꿈을 꾸셨나요?</label>
+                <textarea id="dream-input" class="text-input" rows="5"></textarea>
+            </div>
+            <button id="btn-interpret" class="btn">해석하기 (Interpret)</button>
         </div>
-        <button id="btn-interpret" class="btn">해석하기 (Interpret)</button>
         <div id="dream-result" style="margin-top: 15px; white-space: pre-wrap; font-weight: bold; padding: 10px; border: 2px dashed #000; display: none;"></div>
+        <button id="btn-new-dream" class="btn" style="display: none; margin-top: 15px; width: 100%;">새로운 꿈 기록하기</button>
     `;
 
     container.querySelector('#btn-interpret').addEventListener('click', async () => {
         const text = container.querySelector('#dream-input').value;
         if (!text.trim()) return;
         
+        const inputSection = container.querySelector('#dream-input-section');
+        const btnNew = container.querySelector('#btn-new-dream');
         const resultDiv = container.querySelector('#dream-result');
+        
+        // 입력창 숨기기 방지(중복 방지)
+        inputSection.style.display = 'none';
+        btnNew.style.display = 'none';
+        
         resultDiv.style.display = 'block';
         resultDiv.innerHTML = 'AI가 꿈을 분석 중입니다... 잠시만 기다려주세요.';
         
@@ -52,9 +63,18 @@ function initDreamApp(container) {
             `;
             resultDiv.innerHTML = html;
             saveDream({ text, title: data.title, interpretationHtml: html, date: new Date().toISOString() });
+            btnNew.style.display = 'block'; // 해석 완료 시 새 꿈 작성 버튼 표시
         } catch (err) {
             resultDiv.innerText = '오류: ' + err.message;
+            inputSection.style.display = 'block'; // 오류 발생 시 다시 입력할 수 있도록 복구
         }
+    });
+
+    container.querySelector('#btn-new-dream').addEventListener('click', () => {
+        container.querySelector('#dream-input').value = '';
+        container.querySelector('#dream-result').style.display = 'none';
+        container.querySelector('#btn-new-dream').style.display = 'none';
+        container.querySelector('#dream-input-section').style.display = 'block';
     });
 }
 
@@ -322,4 +342,231 @@ function initSettingsApp(container) {
         saveSetting('ai_config', newConfig);
         container.querySelector('#settings-msg').innerText = '저장되었습니다.';
     });
+}
+
+function initPongApp(container) {
+    container.innerHTML = `
+        <div style="position:relative; width:100%; height:100%; background:#000;">
+            <canvas id="pong-canvas" style="display:block; width:100%; height:100%;"></canvas>
+            <div id="pong-score" style="position:absolute; top:20px; width:100%; text-align:center; color:#fff; font-size:30px; font-family:monospace; pointer-events:none;">0 - 0</div>
+            <button id="pong-start" class="btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); padding:10px 20px; font-size:18px; z-index:10; cursor:pointer;">Start Game</button>
+        </div>
+    `;
+
+    const canvas = container.querySelector('#pong-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDiv = container.querySelector('#pong-score');
+    const startBtn = container.querySelector('#pong-start');
+    
+    let isRunning = false;
+    let isPaused = false;
+    let animId = null;
+
+    const paddleW = 10;
+    const paddleH = 60;
+    let width = canvas.offsetWidth;
+    let height = canvas.offsetHeight;
+    
+    // Resize observer to handle canvas resizing and DOM removal
+    const ro = new ResizeObserver(() => {
+        if (!document.body.contains(canvas)) {
+            ro.disconnect();
+            cancelAnimationFrame(animId);
+            return;
+        }
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        width = canvas.width;
+        height = canvas.height;
+        player.x = 15;
+        ai.x = width - 15 - paddleW;
+    });
+    ro.observe(container);
+
+    const player = { x: 15, y: height/2 - paddleH/2, w: paddleW, h: paddleH, score: 0, targetY: height/2 - paddleH/2 };
+    const ai = { x: width - 15 - paddleW, y: height/2 - paddleH/2, w: paddleW, h: paddleH, score: 0 };
+    const ball = { x: width/2, y: height/2, r: 6, vx: 5, vy: 5, speed: 6 };
+
+    function resetBall() {
+        ball.x = width/2;
+        ball.y = height/2;
+        ball.vx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+        ball.vy = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 2 + 3);
+    }
+
+    container.addEventListener('mousemove', (e) => {
+        if (!isRunning || isPaused) return;
+        
+        if (document.pointerLockElement === canvas) {
+            let tY = player.targetY + e.movementY;
+            if (tY < 0) tY = 0;
+            if (tY > height - player.h) tY = height - player.h;
+            player.targetY = tY;
+        } else {
+            const rect = canvas.getBoundingClientRect();
+            const my = e.clientY - rect.top;
+            let tY = my - player.h/2;
+            if (tY < 0) tY = 0;
+            if (tY > height - player.h) tY = height - player.h;
+            player.targetY = tY;
+        }
+    });
+
+    const handleKey = (e) => {
+        if (!document.body.contains(canvas)) {
+            document.removeEventListener('keydown', handleKey);
+            return;
+        }
+        if (e.key === 'Escape' && isRunning) {
+            if (document.pointerLockElement === canvas) {
+                document.exitPointerLock();
+            } else {
+                isPaused = true;
+            }
+        }
+    };
+    document.addEventListener('keydown', handleKey);
+
+    const handlePointerLock = () => {
+        if (!document.body.contains(canvas)) {
+            document.removeEventListener('pointerlockchange', handlePointerLock);
+            return;
+        }
+        if (document.pointerLockElement === canvas) {
+            isPaused = false;
+        } else {
+            if (isRunning) isPaused = true;
+        }
+    };
+    document.addEventListener('pointerlockchange', handlePointerLock);
+
+    canvas.addEventListener('click', () => {
+        if (isRunning && isPaused) {
+            canvas.requestPointerLock();
+        }
+    });
+
+    startBtn.addEventListener('click', () => {
+        startBtn.style.display = 'none';
+        isRunning = true;
+        isPaused = false;
+        player.score = 0;
+        ai.score = 0;
+        scoreDiv.innerText = `${player.score} - ${ai.score}`;
+        resetBall();
+        canvas.requestPointerLock();
+        if (!animId) loop();
+    });
+
+    // Draw initial state
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.fillRect(ai.x, ai.y, ai.w, ai.h);
+
+    function loop() {
+        if (!document.body.contains(canvas)) return; // Exit loop if app closed
+
+        if (isRunning && !isPaused) {
+            // physics
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // wall bounce
+            if (ball.y - ball.r < 0) {
+                ball.y = ball.r;
+                ball.vy *= -1;
+            } else if (ball.y + ball.r > height) {
+                ball.y = height - ball.r;
+                ball.vy *= -1;
+            }
+
+            // Player smooth movement
+            if (player.targetY !== undefined) {
+                player.y += (player.targetY - player.y) * 0.3; // 부드러운 보간(Lerp) 적용
+            }
+
+            // AI movement
+            const aiCenter = ai.y + ai.h/2;
+            const deadzone = 15; // 반응 둔감도 증가
+            const aiSpeed = 3.0; // AI 속도 감소 (사람이 이길 수 있게)
+            
+            // 공이 AI 쪽으로 올 때만 집중해서 따라가도록
+            if (ball.vx > 0) {
+                if (aiCenter < ball.y - deadzone) ai.y += aiSpeed;
+                else if (aiCenter > ball.y + deadzone) ai.y -= aiSpeed;
+            } else {
+                // 공이 멀어질 때는 천천히 중앙으로 복귀
+                if (aiCenter < height/2 - deadzone) ai.y += aiSpeed * 0.5;
+                else if (aiCenter > height/2 + deadzone) ai.y -= aiSpeed * 0.5;
+            }
+            
+            if (ai.y < 0) ai.y = 0;
+            if (ai.y > height - ai.h) ai.y = height - ai.h;
+
+            // Collision with player paddle
+            if (ball.vx < 0 && ball.x - ball.r < player.x + player.w && ball.x + ball.r > player.x && ball.y + ball.r > player.y && ball.y - ball.r < player.y + player.h) {
+                ball.vx *= -1.05; // slightly increase speed
+                ball.x = player.x + player.w + ball.r;
+                const hitDelta = ball.y - (player.y + player.h/2);
+                ball.vy = hitDelta * 0.15;
+            }
+            
+            // Collision with AI paddle
+            if (ball.vx > 0 && ball.x + ball.r > ai.x && ball.x - ball.r < ai.x + ai.w && ball.y + ball.r > ai.y && ball.y - ball.r < ai.y + ai.h) {
+                ball.vx *= -1.05; // slightly increase speed
+                ball.x = ai.x - ball.r;
+                const hitDelta = ball.y - (ai.y + ai.h/2);
+                ball.vy = hitDelta * 0.15;
+            }
+
+            // Scoring
+            if (ball.x < -20) {
+                ai.score++;
+                scoreDiv.innerText = `${player.score} - ${ai.score}`;
+                resetBall();
+            } else if (ball.x > width + 20) {
+                player.score++;
+                scoreDiv.innerText = `${player.score} - ${ai.score}`;
+                resetBall();
+            }
+        }
+
+        // Render
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+
+        // Center line
+        ctx.setLineDash([10, 15]);
+        ctx.beginPath();
+        ctx.moveTo(width/2, 0);
+        ctx.lineTo(width/2, height);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Paddles and Ball
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+        ctx.fillRect(ai.x, ai.y, ai.w, ai.h);
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+        ctx.fill();
+
+        if (isPaused) {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 30px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PAUSED', width/2, height/2);
+            ctx.font = '16px monospace';
+            ctx.fillText('Click to resume (ESC to pause)', width/2, height/2 + 35);
+        }
+
+        animId = requestAnimationFrame(loop);
+    }
 }

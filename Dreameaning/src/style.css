@@ -113,6 +113,7 @@ body {
     width: 100%;
     height: calc(100% - 40px); /* Leave room for taskbar */
     z-index: 10;
+    pointer-events: none; /* 빈 공간 클릭이 배경화면으로 통과하도록 허용 */
 }
 
 /* OS Taskbar */
@@ -242,6 +243,7 @@ body {
     min-width: 400px;
     min-height: 300px;
     box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.2);
+    pointer-events: auto; /* 창 자체는 클릭 가능하게 복원 */
 }
 
 .os-window.maximized {
@@ -335,6 +337,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    pointer-events: auto; /* 팝업 띄워질 때 클릭 블로킹 */
 }
 
 .os-dialog {
@@ -393,4 +396,47 @@ body {
 .btn:hover {
     background: var(--text-color);
     color: var(--bg-color);
+}
+
+/* Custom OS Cursors */
+#os-environment {
+    --cursor-default: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><polygon points='4,4 4,22 10,16 16,26 20,24 14,14 24,14' fill='%23000' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/></svg>") 4 4, auto;
+    --cursor-pointer: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><polygon points='4,4 4,22 10,16 16,26 20,24 14,14 24,14' fill='%23fff' stroke='%23000' stroke-width='2' stroke-linejoin='round'/></svg>") 4 4, pointer;
+}
+
+#os-environment.active, #os-environment.active * {
+    cursor: var(--cursor-default);
+}
+
+/* Clickable elements */
+#os-environment.active button,
+#os-environment.active a,
+#os-environment.active .btn,
+#os-environment.active .taskbar-start,
+#os-environment.active .taskbar-app-btn,
+#os-environment.active .menu-item,
+#os-environment.active .archive-item,
+#os-environment.active .dream-menu-btn,
+#os-environment.active .menu-action-btn,
+#os-environment.active .eyes,
+#os-environment.active .win-btn,
+#os-environment.active [style*="cursor: pointer"],
+#os-environment.active [style*="cursor:pointer"] {
+    cursor: var(--cursor-pointer) !important;
+}
+
+/* Text elements */
+#os-environment.active input,
+#os-environment.active textarea,
+#os-environment.active .text-input {
+    cursor: text !important;
+}
+
+/* Window controls */
+#os-environment.active .resize-handle {
+    cursor: nwse-resize !important;
+}
+
+#os-environment.active .window-header {
+    cursor: move !important;
 }
